@@ -2,8 +2,6 @@
 from PIL import Image, ImageDraw, UnidentifiedImageError
 import os
 
-margin = 118
-
 def get_images(dir):
     images = []
     for root,dirs,files in os.walk(dir):
@@ -29,6 +27,9 @@ def calculate_scale_rate(original, current):
     return current / original * 1.0
 
 def scale_image(img, rate):
+    '''
+    只能缩小，不能放大（rate 大于 1 时，尺寸还是原来的尺寸）
+    '''
     w, h = img.size
     img.thumbnail((w*rate, h*rate))
     return img
@@ -54,12 +55,14 @@ def paste_up(canvas, top_margin, images):
     if len(images) is 0:
         return 0
     img_0_0 = images[0]
+    margin = img_0_0.height + top_margin
     img_0_1 = get_another_image_in_one_row(img_0_0, images[1:], canvas.width)
-
     if img_0_1 is not None:
         x_interval = (canvas.width - img_0_0.width - img_0_1.width)/3
         x_offset = x_interval * 2 + img_0_0.width
         draw_img_on_canvas(img_0_1, canvas, (x_offset,top_margin))
+        if img_0_1.height > img_0_0.height:
+            margin = img_0_1.height + top_margin
         images.remove(img_0_1)
     else:
         x_interval = (canvas.width - img_0_0.width)/2
@@ -67,12 +70,14 @@ def paste_up(canvas, top_margin, images):
     draw_img_on_canvas(img_0_0, canvas, (x_interval,top_margin))
     images.remove(img_0_0)
     
-    return top_margin + img_0_0.height
+    return margin
 
 if __name__ == "__main__":
+    canvas_index = 0
+    #横向
     images_original = get_images("./horizontal")
     images_resized = []
-    canvas_index = 0
+    margin = 118
     for img in images_original:
         rate = calculate_scale_rate(img.height, 877)
         img_new = scale_image(img, rate)
@@ -81,7 +86,7 @@ if __name__ == "__main__":
         canvas_index += 1
         print("canvas_index: %d" % canvas_index)
         canvas = get_canvas()
-        top_margin = paste_up(canvas, 118, images_resized) + margin
+        top_margin = paste_up(canvas, margin+236, images_resized) + margin
         top_margin = paste_up(canvas, top_margin, images_resized) + margin
         top_margin = paste_up(canvas, top_margin, images_resized) + margin
         canvas.save('canvas_{}.jpg'.format(canvas_index), 'jpeg')
@@ -90,6 +95,7 @@ if __name__ == "__main__":
     #纵向
     images_original = get_images("./longitudinal")
     images_resized = []
+    margin = 242
     for img in images_original:
         rate = calculate_scale_rate(img.width, 877)
         img_new = scale_image(img, rate)
@@ -99,8 +105,7 @@ if __name__ == "__main__":
         canvas_index += 1
         print("canvas_index: %d" % canvas_index)
         canvas = get_canvas_horizontal()
-        top_margin = paste_up(canvas, 118, images_resized) + margin
-        top_margin = paste_up(canvas, top_margin, images_resized) + margin
+        top_margin = paste_up(canvas, margin, images_resized) + margin
         top_margin = paste_up(canvas, top_margin, images_resized) + margin
         canvas.save('canvas_{}.jpg'.format(canvas_index), 'jpeg')
         print(len(images_resized))
